@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP 客户端-服务器架构演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: #0a0e27;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 1920px;
+            height: 1080px;
+            position: relative;
+            background: linear-gradient(135deg, #0a0e27 0%, #151933 100%);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 顶部标题栏 */
+        .header {
+            height: 100px;
+            background: linear-gradient(90deg, rgba(0,123,255,0.1) 0%, rgba(0,255,136,0.1) 100%);
+            border-bottom: 2px solid rgba(0,255,136,0.3);
+            display: flex;
+            align-items: center;
+            padding: 0 60px;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00ff88, transparent);
+            animation: scanLine 3s linear infinite;
+        }
+        
+        @keyframes scanLine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .main-title {
+            font-size: 36px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0,255,136,0.5);
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            color: rgba(255,255,255,0.7);
+            margin-left: 30px;
+            padding-left: 30px;
+            border-left: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        /* 主要内容区 */
+        .content {
+            flex: 1;
+            display: flex;
+            position: relative;
+            padding: 40px;
+        }
+        
+        /* 左侧控制面板 */
+        .control-panel {
+            width: 350px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 10px;
+            padding: 30px;
+            margin-right: 40px;
+        }
+        
+        .panel-title {
+            font-size: 20px;
+            color: #00ff88;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0,255,136,0.2);
+        }
+        
+        .control-btn {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: linear-gradient(135deg, rgba(0,123,255,0.1) 0%, rgba(0,255,136,0.1) 100%);
+            border: 1px solid rgba(0,255,136,0.3);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        
+        .control-btn:hover {
+            background: linear-gradient(135deg, rgba(0,123,255,0.2) 0%, rgba(0,255,136,0.2) 100%);
+            transform: translateX(5px);
+            box-shadow: 0 0 20px rgba(0,255,136,0.3);
+        }
+        
+        .control-btn.active {
+            background: linear-gradient(135deg, #007bff 0%, #00ff88 100%);
+            color: #0a0e27;
+            font-weight: bold;
+        }
+        
+        /* 场景选择器 */
+        .scenario-selector {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .scenario-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            font-size: 14px;
+        }
+        
+        .scenario-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        /* 主演示区 */
+        .demo-area {
+            flex: 1;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 网格背景 */
+        .grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+        
+        /* 架构组件 */
+        .architecture-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 60px;
+            position: relative;
+        }
+        
+        /* 组件盒子 */
+        .component-box {
+            width: 280px;
+            height: 350px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+            border: 2px solid rgba(0,255,136,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            position: relative;
+            transition: all 0.5s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .component-box.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px rgba(0,255,136,0.4);
+            border-color: #00ff88;
+        }
+        
+        .component-box.highlight {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .component-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #007bff 0%, #00ff88 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            box-shadow: 0 0 30px rgba(0,255,136,0.5);
+        }
+        
+        .component-title {
+            font-size: 24px;
+            color: #00ff88;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 300;
+        }
+        
+        .component-subtitle {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .component-content {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: rgba(255,255,255,0.8);
+            overflow-y: auto;
+        }
+        
+        .component-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .component-content::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .component-content::-webkit-scrollbar-thumb {
+            background: rgba(0,255,136,0.3);
+            border-radius: 2px;
+        }
+        
+        /* 数据流动画 */
+        .data-flow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            height: 200px;
+            pointer-events: none;
+        }
+        
+        .flow-line {
+            position: absolute;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00ff88, transparent);
+            opacity: 0;
+        }
+        
+        .flow-line.active {
+            animation: flowData 2s ease-in-out;
+        }
+        
+        @keyframes flowData {
+            0% {
+                opacity: 0;
+                width: 0;
+                left: 25%;
+            }
+            50% {
+                opacity: 1;
+                width: 50%;
+                left: 25%;
+            }
+            100% {
+                opacity: 0;
+                width: 0;
+                left: 75%;
+            }
+        }
+        
+        /* 数据包 */
+        .data-packet {
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            background: linear-gradient(135deg, #007bff 0%, #00ff88 100%);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #0a0e27;
+            font-weight: bold;
+            opacity: 0;
+            box-shadow: 0 0 20px rgba(0,255,136,0.6);
+        }
+        
+        .data-packet.send {
+            animation: sendPacket 3s ease-in-out;
+        }
+        
+        @keyframes sendPacket {
+            0% {
+                left: 25%;
+                top: 50%;
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0);
+            }
+            20% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            80% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                left: 75%;
+                top: 50%;
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0);
+            }
+        }
+        
+        /* 连接线 */
+        .connection-line {
+            position: absolute;
+            top: 50%;
+            left: 25%;
+            width: 50%;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                rgba(0,255,136,0.2) 0%, 
+                rgba(0,255,136,0.5) 50%, 
+                rgba(0,255,136,0.2) 100%);
+            transform: translateY(-50%);
+        }
+        
+        .connection-line::before,
+        .connection-line::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            top: 50%;
+            transform: translateY(-50%);
+            box-shadow: 0 0 10px rgba(0,255,136,0.8);
+        }
+        
+        .connection-line::before {
+            left: -5px;
+        }
+        
+        .connection-line::after {
+            right: -5px;
+        }
+        
+        /* 信息面板 */
+        .info-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            border: 1px solid rgba(0,255,136,0.3);
+            border-radius: 10px;
+            padding: 20px 40px;
+            max-width: 800px;
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+        
+        .info-panel.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+        
+        .info-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: rgba(255,255,255,0.9);
+        }
+        
+        .code-block {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #00ff88;
+        }
+        
+        /* 步骤指示器 */
+        .step-indicator {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(0,255,136,0.3);
+            border-radius: 10px;
+            padding: 15px 25px;
+        }
+        
+        .step-text {
+            font-size: 14px;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .step-number {
+            font-size: 24px;
+            color: #00ff88;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        /* 场景内容 */
+        .scenario-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            padding: 60px;
+        }
+        
+        .scenario-content.active {
+            display: flex;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 1600px) {
+            .container {
+                transform: scale(0.8);
+                transform-origin: top left;
+            }
+        }
+        
+        /* 加载动画 */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10,14,39,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(0,255,136,0.2);
+            border-top-color: #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 标题栏 -->
+        <div class="header">
+            <h1 class="main-title">MCP 架构演示系统</h1>
+            <span class="subtitle">Model Context Protocol - 客户端/服务器交互可视化</span>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="content">
+            <!-- 左侧控制面板 -->
+            <div class="control-panel">
+                <h2 class="panel-title">📊 演示控制</h2>
+                
+                <button class="control-btn" onclick="showArchitecture()">
+                    🏗️ 查看架构概览
+                </button>
+                
+                <button class="control-btn" onclick="startDataFlow()">
+                    📡 启动数据流演示
+                </button>
+                
+                <button class="control-btn" onclick="demonstrateHandshake()">
+                    🤝 连接握手过程
+                </button>
+                
+                <button class="control-btn" onclick="showToolExecution()">
+                    ⚙️ 工具执行流程
+                </button>
+                
+                <div class="scenario-selector">
+                    <h3 style="color: #00ff88; font-size: 16px; margin-bottom: 15px;">场景选择</h3>
+                    
+                    <button class="scenario-btn" onclick="loadScenario('client-only')">
+                        💻 场景1：仅客户端
+                    </button>
+                    
+                    <button class="scenario-btn" onclick="loadScenario('server-only')">
+                        🖥️ 场景2：仅服务器
+                    </button>
+                    
+                    <button class="scenario-btn" onclick="loadScenario('full-stack')">
+                        🔄 场景3：完整系统
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 主演示区 -->
+            <div class="demo-area">
+                <div class="grid-bg"></div>
+                
+                <!-- 架构展示 -->
+                <div class="architecture-container" id="mainDemo">
+                    <!-- 应用程序/Claude -->
+                    <div class="component-box" id="appComponent">
+                        <div class="component-icon">👤</div>
+                        <div class="component-title">应用程序</div>
+                        <div class="component-subtitle">Claude AI</div>
+                        <div class="component-content">
+                            <strong>功能：</strong><br>
+                            • 发送用户请求<br>
+                            • 接收AI响应<br>
+                            • 决策执行工具<br>
+                            <br>
+                            <strong>状态：</strong> <span id="appStatus">待机</span>
+                        </div>
+                    </div>
+                    
+                    <!-- MCP 客户端 -->
+                    <div class="component-box" id="clientComponent">
+                        <div class="component-icon">📱</div>
+                        <div class="component-title">MCP 客户端</div>
+                        <div class="component-subtitle">Protocol Handler</div>
+                        <div class="component-content">
+                            <strong>职责：</strong><br>
+                            • 协议转换<br>
+                            • 会话管理<br>
+                            • 资源清理<br>
+                            • 错误处理<br>
+                            <br>
+                            <strong>连接：</strong> <span id="clientStatus">未连接</span>
+                        </div>
+                    </div>
+                    
+                    <!-- MCP 服务器 -->
+                    <div class="component-box" id="serverComponent">
+                        <div class="component-icon">🖥️</div>
+                        <div class="component-title">MCP 服务器</div>
+                        <div class="component-subtitle">Tool Provider</div>
+                        <div class="component-content">
+                            <strong>工具列表：</strong><br>
+                            • read_doc_contents<br>
+                            • edit_document<br>
+                            • list_documents<br>
+                            <br>
+                            <strong>状态：</strong> <span id="serverStatus">运行中</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 连接线 -->
+                    <div class="connection-line"></div>
+                    
+                    <!-- 数据流动画容器 -->
+                    <div class="data-flow" id="dataFlow"></div>
+                </div>
+                
+                <!-- 步骤指示器 -->
+                <div class="step-indicator" id="stepIndicator" style="display: none;">
+                    <span class="step-number">1</span>
+                    <span class="step-text">初始化连接</span>
+                </div>
+                
+                <!-- 信息面板 -->
+                <div class="info-panel" id="infoPanel">
+                    <div class="info-text" id="infoText">
+                        点击控制按钮开始演示
+                    </div>
+                </div>
+                
+                <!-- 加载遮罩 -->
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 组件引用
+        const appComponent = document.getElementById('appComponent');
+        const clientComponent = document.getElementById('clientComponent');
+        const serverComponent = document.getElementById('serverComponent');
+        const infoPanel = document.getElementById('infoPanel');
+        const infoText = document.getElementById('infoText');
+        const stepIndicator = document.getElementById('stepIndicator');
+        const dataFlow = document.getElementById('dataFlow');
+        
+        // 显示架构概览
+        function showArchitecture() {
+            resetComponents();
+            
+            // 依次高亮组件
+            setTimeout(() => {
+                appComponent.classList.add('highlight');
+                showInfo('应用程序层：用户界面与Claude AI交互层');
+            }, 500);
+            
+            setTimeout(() => {
+                appComponent.classList.remove('highlight');
+                clientComponent.classList.add('highlight');
+                showInfo('MCP客户端：协议处理与会话管理');
+            }, 2000);
+            
+            setTimeout(() => {
+                clientComponent.classList.remove('highlight');
+                serverComponent.classList.add('highlight');
+                showInfo('MCP服务器：工具实现与数据处理');
+            }, 3500);
+            
+            setTimeout(() => {
+                serverComponent.classList.remove('highlight');
+                showInfo('完整架构：三层结构协同工作');
+            }, 5000);
+        }
+        
+        // 数据流演示
+        function startDataFlow() {
+            resetComponents();
+            stepIndicator.style.display = 'block';
+            
+            // Step 1: 请求
+            updateStep(1, '用户发起请求');
+            appComponent.classList.add('active');
+            
+            setTimeout(() => {
+                // 创建数据包
+                const packet1 = createDataPacket('REQUEST');
+                dataFlow.appendChild(packet1);
+                packet1.classList.add('send');
+                
+                updateStep(2, '客户端处理请求');
+                clientComponent.classList.add('active');
+            }, 1000);
+            
+            setTimeout(() => {
+                // 第二个数据包
+                const packet2 = createDataPacket('CALL');
+                dataFlow.appendChild(packet2);
+                packet2.classList.add('send');
+                
+                updateStep(3, '服务器执行工具');
+                serverComponent.classList.add('active');
+            }, 3000);
+            
+            setTimeout(() => {
+                // 返回数据包
+                const packet3 = createDataPacket('RESULT');
+                packet3.style.animationDirection = 'reverse';
+                dataFlow.appendChild(packet3);
+                packet3.classList.add('send');
+                
+                updateStep(4, '返回执行结果');
+            }, 5000);
+            
+            setTimeout(() => {
+                resetComponents();
+                stepIndicator.style.display = 'none';
+                showInfo('数据流演示完成');
+            }, 7000);
+        }
+        
+        // 握手过程演示
+        function demonstrateHandshake() {
+            resetComponents();
+            showInfo('连接握手过程演示');
+            
+            // 更新状态
+            document.getElementById('clientStatus').textContent = '连接中...';
+            clientComponent.classList.add('active');
+            
+            setTimeout(() => {
+                document.getElementById('clientStatus').textContent = '已连接';
+                document.getElementById('serverStatus').textContent = '已认证';
+                serverComponent.classList.add('active');
+                
+                showInfo(`
+                    <div class="code-block">
+                    // 握手过程<br>
+                    client.connect() → server.accept()<br>
+                    client.authenticate() → server.verify()<br>
+                    client.list_tools() → server.provide_tools()
+                    </div>
+                `);
+            }, 2000);
+        }
+        
+        // 工具执行流程
+        function showToolExecution() {
+            resetComponents();
+            stepIndicator.style.display = 'block';
+            
+            const steps = [
+                { num: 1, text: 'Claude决定使用工具', component: appComponent },
+                { num: 2, text: '客户端封装请求', component: clientComponent },
+                { num: 3, text: '服务器执行工具', component: serverComponent },
+                { num: 4, text: '返回执行结果', component: clientComponent },
+                { num: 5, text: 'Claude处理结果', component: appComponent }
+            ];
+            
+            steps.forEach((step, index) => {
+                setTimeout(() => {
+                    updateStep(step.num, step.text);
+                    resetComponents();
+                    step.component.classList.add('active');
+                    
+                    if (index === 2) {
+                        showInfo(`
+                            <div class="code-block">
+                            tool_name: "read_doc_contents"<br>
+                            input: { doc_id: "report.pdf" }<br>
+                            execution_time: 125ms
+                            </div>
+                        `);
+                    }
+                }, index * 2000);
+            });
+            
+            setTimeout(() => {
+                resetComponents();
+                stepIndicator.style.display = 'none';
+                showInfo('工具执行流程演示完成');
+            }, steps.length * 2000);
+        }
+        
+        // 加载场景
+        function loadScenario(scenario) {
+            const loading = document.getElementById('loadingOverlay');
+            loading.classList.add('show');
+            
+            setTimeout(() => {
+                resetComponents();
+                
+                switch(scenario) {
+                    case 'client-only':
+                        appComponent.classList.add('active');
+                        clientComponent.classList.add('active');
+                        serverComponent.style.opacity = '0.3';
+                        showInfo('场景1：仅使用客户端连接外部MCP服务器');
+                        break;
+                        
+                    case 'server-only':
+                        appComponent.style.opacity = '0.3';
+                        clientComponent.style.opacity = '0.3';
+                        serverComponent.classList.add('active');
+                        showInfo('场景2：仅实现服务器供他人使用');
+                        break;
+                        
+                    case 'full-stack':
+                        appComponent.classList.add('active');
+                        clientComponent.classList.add('active');
+                        serverComponent.classList.add('active');
+                        showInfo('场景3：完整系统实现（教学/测试用途）');
+                        break;
+                }
+                
+                loading.classList.remove('show');
+            }, 500);
+        }
+        
+        // 辅助函数
+        function resetComponents() {
+            [appComponent, clientComponent, serverComponent].forEach(comp => {
+                comp.classList.remove('active', 'highlight');
+                comp.style.opacity = '1';
+            });
+            
+            // 清理数据包
+            dataFlow.innerHTML = '';
+        }
+        
+        function showInfo(text) {
+            infoText.innerHTML = text;
+            infoPanel.classList.add('show');
+            
+            setTimeout(() => {
+                infoPanel.classList.remove('show');
+            }, 5000);
+        }
+        
+        function updateStep(num, text) {
+            stepIndicator.querySelector('.step-number').textContent = num;
+            stepIndicator.querySelector('.step-text').textContent = text;
+        }
+        
+        function createDataPacket(label) {
+            const packet = document.createElement('div');
+            packet.className = 'data-packet';
+            packet.textContent = label;
+            return packet;
+        }
+        
+        // 初始化
+        window.addEventListener('load', () => {
+            showInfo('MCP架构演示系统已就绪 - 选择左侧功能开始');
+        });
+        
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1': showArchitecture(); break;
+                case '2': startDataFlow(); break;
+                case '3': demonstrateHandshake(); break;
+                case '4': showToolExecution(); break;
+            }
+        });
+    </script>
+</body>
+</html>
